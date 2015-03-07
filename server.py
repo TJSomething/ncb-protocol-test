@@ -27,6 +27,7 @@
 import sys
 
 from twisted.internet import reactor
+from twisted.internet import task
 from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -39,31 +40,72 @@ from autobahn.twisted.resource import WebSocketResource, \
 
 import json
 import hashlib
+import random
+
+subscribers = []
+def sendData():
+    data = [random.random() for i in xrange(3)]
+    print "Sending data: %s" % data
+    for sub in subscribers:
+        sub.sendMessage(str(data))
 
 class NCSServerProtocol(WebSocketServerProtocol):
-    protocol = None
+    messages = []
+    messagesLeft = None
     path = None
 
     def handleSensors(self, sensors):
-        self.sendMessage(json.dumps(sensors), False)
+        self.messages = [sensors]
+        self.messagesLeft = len(self.messages[0]["arrays"])
 
-    def handleCamera(self,data):
-        self.sendMessage(data, True)
+    def handleData(self, data):
+        self.messages.append(data)
+        self.messagesLeft -= 1
+
+        if self.messagesLeft == 0:
+            self.messagesLeft = None
+            self.handleMessages()
+
+    def handleMessages(self):
+        def setNested(l, path, value):
+            splitPath = path.split(".")
+            for key in splitPath[:-1]:
+                if isinstance(l, list):
+                    l = l[int(key)]
+                else:
+                    l = l[key]
+
+            if isinstance(l, list):
+                l[int(splitPath[-1])] = value
+            else:
+                l[splitPath[-1]] = value
+
+        sensors = self.messages[0]
+
+        # Typically, we'd want to put the binary into the sensors structure and
+        # then process that.
+        # But, since this is just an example, we're going to replace the locations
+        # where the data would go with a string describing the data and print
+        # it.
+        for index, message in enumerate(self.messages[1:]):
+            path = sensors["arrays"][index]["path"]
+            dataDescriptor = "%s[%d]" % (sensors["arrays"][index]["type"], len(message))
+            setNested(sensors["data"], path, dataDescriptor)
+
+        print sensors
 
     def onConnect(self, request):
         self.path = request.path
-        print("WebSocket connection request: {}".format(request))
+        subscribers.append(self)
 
     def onMessage(self, payload, isBinary):
-        if self.protocol is None:
-            self.protocol = payload
+        if not isBinary:
+            self.handleSensors(json.loads(payload))
         else:
-            if self.protocol == 'sensor':
-                self.handleSensors(json.loads(payload))
-            elif self.protocol == 'camera':
-                self.handleCamera(payload)
-            self.protocol = None
+            self.handleData(payload)
 
+    def onClose(self, wasClean, code, reason):
+        subscribers.remove(self)
 
 if __name__ == '__main__':
 
@@ -92,5 +134,9 @@ if __name__ == '__main__':
     site = Site(root)
     site.protocol = HTTPChannelHixie76Aware  # needed if Hixie76 is to be supported
     reactor.listenTCP(8080, site)
+    print "Server running on localhost:8080..."
+
+    l = task.LoopingCall(sendData)
+    l.start(1.0)
 
     reactor.run()

@@ -3,16 +3,21 @@
 <head>
 <title>WebSocket test</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"></script>
 </head>
 <body>
 Sensor data will be echoed in the console in the browser.
 <div>
-<label>WebSocket URL: <input id="ws-url" value="ws://localhost:8080/ws"></label>
+<label>WebSocket URL: <input id="ws-url" value="ws://localhost:8080/ws/0"></label>
 <button id="connect">Connect</button>
 </div>
 
 <div id="3d" style="display: none;"></div>
 <div id="2d"></div>
+Response:
+<div id="response"></div>
+<canvas id="videoImage" width="160" height="120"></canvas>
+<video autoplay id="monitor" width="160" height="120" style="display: none;"></div>
 <script>
 // Handle sockets
 var ws;
@@ -22,7 +27,7 @@ function startSending() {
         socketsOpen += 1;
     }
     function onMessage(event) {
-        console.log(event.data);
+        document.getElementById("response").innerHTML = event.data;
     }
     if (!socketsOpen) {
         var url = document.getElementById('ws-url').value;
@@ -36,11 +41,12 @@ function startSending() {
 }
 
 function send() {
-    if (socketsOpen === 1) {
-        ws.send('sensor');
+    if (socketsOpen === 1 &&
+        ws.readyState === 1) {
         ws.send(JSON.stringify(sensorData));
-        ws.send('camera');
-        ws.send(imageData.data.buffer);
+        buffers.forEach(function (buffer) {
+            ws.send(buffer);
+        });
     }
 }
 
@@ -48,40 +54,91 @@ document.getElementById('connect').addEventListener('click', function () {
     startSending();
 });
 
+// An example of the sensor data
 var sensorData = {
-  "speed": 1.7,
-  "angularVelocity": 1.3,
-  "odometer": 6.2327614434364,
-  "compass": 120.08452439086,
-  "arms": {
-    "left": {
-      "held": "portable_table"
+  "version": "1.0",
+  "arrays": [
+    {
+        "path": "camera.image",
+        "type": "Uint8Array"
     },
-    "right": {
-      "held": null
+    {
+        "path": "realCamera.image",
+        "type": "Uint8Array"
+    },
+    {
+        "path": "microphone.channels.0",
+        "type": "Float32Array"
+    },
+    {
+        "path": "microphone.channels.1",
+        "type": "Float32Array"
+    },
+    {
+        "path": "realMicrophone.channels.0",
+        "type": "Float32Array"
+    },
+    {
+        "path": "realMicrophone.channels.1",
+        "type": "Float32Array"
     }
-  },
-  "camera": {
-    "width": 320,
-    "height": 240
-  },
-  "collision": {
-    "front": false,
-    "back": true,
-    "left": false,
-    "right": false,
-    "top": false,
-    "bottom": true
-  },
-  "keys": [
-    "A",
-    "W"
-  ]
+  ],
+  "data": {
+    "speed": 1.7,
+    "angularVelocity": 1.3,
+    "odometer": 6.2327614434364,
+    "compass": 120.08452439086,
+    "arms": {
+      "left": {
+        "held": "portable_table"
+      },
+      "right": {
+        "held": null
+      }
+    },
+    "camera": {
+      "image": null,
+      "width": 320,
+      "height": 240
+    },
+    "realCamera": {
+      "image": null,
+      "width": 160,
+      "height": 120
+    },
+    "microphone": {
+      "channels": [ null, null ],
+      "sampleRate": 44100
+    },
+    "realMicrophone": {
+      "channels": [ null, null ],
+      "sampleRate": 48000
+    },
+    "collision": {
+      "front": false,
+      "back": true,
+      "left": false,
+      "right": false,
+      "top": false,
+      "bottom": true
+    },
+    "keys": [
+      "A",
+      "W"
+    ]
+  }
 };
+var buffers = new Array(6);
+var placeholderAudio = new Float32Array(48000/30);
+buffers[2] = placeholderAudio;
+buffers[3] = placeholderAudio;
+buffers[4] = placeholderAudio;
+buffers[5] = placeholderAudio;
 
 var canvas = document.createElement('canvas'),
     ctx = canvas.getContext('2d'),
     imageData = ctx.createImageData(320, 240);
+buffers[0] = imageData.data.buffer;
 canvas.width = 320;
 canvas.height = 240;
 document.getElementById('2d').appendChild(canvas);
@@ -108,7 +165,7 @@ scene.add(cube);
 
 // This flips the rendered scene
 var cameraData;
-var getImageData = (function () {
+var get3DImageData = (function () {
     var arraySize, i, intView,
         rowView1, rowView2, tempRow, rows, cols;
 
@@ -143,15 +200,59 @@ var getImageData = (function () {
     };
 }());
 
+// Polyfill prefix extensions for webcam
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+window.URL = window.URL || window.webkitURL;
+// Setup the webcam
+var video = document.getElementById('monitor');
+var videoImage = document.getElementById('videoImage');
+var videoImageContext = videoImage.getContext('2d');
+var videoData = videoImageContext.createImageData(videoImage.width, videoImage.height);
+buffers[1] = videoData.data.buffer;
+videoImageContext.fillStyle = '#000000';
+videoImageContext.fillRect(0,0, videoImage.width, videoImage.height);
+navigator.getUserMedia({video: true}, gotStream, noStream);
+
+function gotStream(stream) {
+	if (window.URL) {
+        video.src = window.URL.createObjectURL(stream);
+    } else { // Opera
+	    video.src = stream;
+    }
+
+	video.onerror = function(e) {
+        stream.stop();
+    }; 
+	stream.onended = noStream;
+}
+
+function noStream(e) {
+	var msg = 'No camera available.';
+	if (e.code === 1) {
+        msg = 'User denied access to use camera.';
+    }
+    console.log(msg);
+}
+
+// Stats
+var stats = new Stats();
+stats.setMode(0);
+document.body.appendChild(stats.domElement);
+
 // Animate
 function animate() {
-    requestAnimationFrame(animate);
+    stats.begin();
     renderer.render(scene, camera);
     cube.rotation.y += 1/60;
-    getImageData();
+    get3DImageData();
     imageData.data.set(cameraData);
     ctx.putImageData(imageData, 0, 0);
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        videoImageContext.drawImage( video, 0, 0, videoImage.width, videoImage.height );
+    }
     send();
+    stats.end();
+    requestAnimationFrame(animate);
 }
 animate();
 </script>

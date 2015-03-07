@@ -1,0 +1,310 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "definitions": {
+      "audio": {
+          "type": "object",
+          "description": "Audio data",
+          "properties": {
+              "channels": { 
+                  "type": "array"
+                  "minLength": 1,
+                  "items": {
+                      "type": "null"
+                  }
+              },
+              "sampleRate": {
+                  "type": "integer",
+                  "minimum": 1
+              }
+          },
+          "required": [ "channels", "sampleRate" ]
+      },
+      "image": {
+          "type": "object",
+          "description": "Image data",
+          "properties": {
+              "data": {
+                  "type": "null"
+              },
+              "width": {
+                  "type": "integer",
+                  "minimum": 0
+              },
+              "height": {
+                  "type": "integer",
+                  "minimum": 0
+              }
+          },
+          "required": [ "data", "width", "height" ]
+      }
+  },
+  "properties": {
+    "version": {
+        "type": "string",
+        "description": "The version of the protocol being used."
+    },
+    "arrays": {
+      "type": "array",
+      "description": "A list of the arrays to follow this message, in order.",
+      "items": {
+          "type": "object",
+          "properties": {
+              "path": {
+                  "type": "string",
+                  "description": "A period-separated path of the location in the sensor data to place the array."
+              },
+              "type": {
+                  "type": "string",
+                  "description": "The type of the array.",
+                  "enum": [
+                    "Int8Array",
+                    "Uint8Array",
+                    "Uint8ClampedArray",
+                    "Int16Array",
+                    "Uint16Array",
+                    "Int32Array",
+                    "Uint32Array",
+                    "Float32Array",
+                    "Float64Array"
+                  ]
+              }
+          },
+          "required": [ "path", "type" ]
+      }
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "speed": {
+          "type": "number",
+          "description": "The rate the the robot is travelling at in meters per second."
+        },
+        "angularVelocity": {
+          "type": "number",
+          "description": "The current angular velocity of the robot."
+        },
+        "odometer": {
+          "type": "number",
+          "description": "The number of meters that the robot has moved"
+        },
+        "compass": {
+          "type": "number",
+          "description": "The direction the robot is pointed in, in degrees."
+        },
+        "arms": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "object",
+              "properties": {
+                "held": {
+                  "type": ["null", "string"],
+                  "description": "The name of the object held in the left hand."
+                }
+              },
+              "required": [ "held" ]
+            },
+            "right": {
+              "type": "object",
+              "properties": {
+                "held": {
+                  "type": ["null", "string"],
+                  "description": "The name of the object held in the right hand."
+                }
+              },
+              "required": [ "held" ]
+            }
+          },
+          "required": [ "left", "right" ]
+        },
+        "camera": {
+          "allOf": [
+            { "$ref": "#/definitions/image" },
+            {
+              "description": "The image from the robot's point of view."
+            }
+          ]
+        },
+        "realCamera": {
+          "allOf": [
+            { "$ref": "#/definitions/image" },
+            {
+              "description": "The image from a webcam."
+            }
+          ]
+        },
+        "microphone": {
+          "allOf": [
+            { "$ref": "#/definitions/audio" },
+            {
+              "description": "The virtual audio from inside the simulation."
+            }
+          ]
+        },
+        "realMicrophone": {
+          "allOf": [
+            { "$ref": "#/definitions/audio" },
+            {
+              "description": "Audio from a real world microphone."
+            }
+          ]
+        },
+        "collision": {
+          "type": "object",
+          "properties": {
+            "front": {
+              "type": "boolean"
+            },
+            "back": {
+              "type": "boolean"
+            },
+            "left": {
+              "type": "boolean"
+            },
+            "right": {
+              "type": "boolean"
+            },
+            "top": {
+              "type": "boolean"
+            },
+            "bottom": {
+              "type": "boolean"
+            }
+          },
+          "description": "Whether there is a collision from a given direction.",
+          "required": [
+            "front",
+            "back",
+            "left",
+            "right",
+            "top",
+            "bottom"
+          ]
+        },
+        "keys": {
+          "type": "array",
+          "description": "A list of the keys being pressed.",
+          "uniqueItems": true,
+          "items": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F",
+                "G",
+                "H",
+                "I",
+                "J",
+                "K",
+                "L",
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+                "T",
+                "U",
+                "V",
+                "W",
+                "X",
+                "Y",
+                "Z",
+                "backspace",
+                "tab",
+                "enter",
+                "shift",
+                "ctrl",
+                "alt",
+                "pause/break",
+                "caps lock",
+                "escape",
+                "page up",
+                "page down",
+                "end",
+                "home",
+                "left arrow",
+                "up arrow",
+                "right arrow",
+                "down arrow",
+                "insert",
+                "delete",
+                "left window",
+                "right window",
+                "select key",
+                "numpad 0",
+                "numpad 1",
+                "numpad 2",
+                "numpad 3",
+                "numpad 4",
+                "numpad 5",
+                "numpad 6",
+                "numpad 7",
+                "numpad 8",
+                "numpad 9",
+                "multiply",
+                "add",
+                "subtract",
+                "decimal point",
+                "divide",
+                "F1",
+                "F2",
+                "F3",
+                "F4",
+                "F5",
+                "F6",
+                "F7",
+                "F8",
+                "F9",
+                "F10",
+                "F11",
+                "F12",
+                "num lock",
+                "scroll lock",
+                ";",
+                "=",
+                ",",
+                "-",
+                ".",
+                "/",
+                "`",
+                "[",
+                "\\",
+                "]",
+                "'"
+            ]
+          }
+        }
+      },
+      "required": [
+        "speed",
+        "angularVelocity",
+        "odometer",
+        "compass",
+        "arms",
+        "collision",
+        "keys"
+      ]
+    }
+  },
+  "required": [
+    "arrays",
+    "data",
+    "version"
+  ]
+}
