@@ -59,31 +59,31 @@ var sensorData = {
   "version": "1.0",
   "arrays": [
     {
-        "path": "camera.image",
+        "path": "sensors.camera.image",
         "type": "Uint8Array"
     },
     {
-        "path": "realCamera.image",
+        "path": "sensors.realCamera.image",
         "type": "Uint8Array"
     },
     {
-        "path": "microphone.channels.0",
+        "path": "sensors.microphone.channels.0",
         "type": "Float32Array"
     },
     {
-        "path": "microphone.channels.1",
+        "path": "sensors.microphone.channels.1",
         "type": "Float32Array"
     },
     {
-        "path": "realMicrophone.channels.0",
+        "path": "sensors.realMicrophone.channels.0",
         "type": "Float32Array"
     },
     {
-        "path": "realMicrophone.channels.1",
+        "path": "sensors.realMicrophone.channels.1",
         "type": "Float32Array"
     }
   ],
-  "data": {
+  "sensors": {
     "speed": 1.7,
     "angularVelocity": 1.3,
     "odometer": 6.2327614434364,
@@ -126,6 +126,9 @@ var sensorData = {
       "A",
       "W"
     ]
+  },
+  "inputs": {
+      "input1": -70.2
   }
 };
 var buffers = new Array(6);

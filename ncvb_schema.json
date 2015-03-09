@@ -73,7 +73,7 @@
           "required": [ "path", "type" ]
       }
     },
-    "data": {
+    "sensors": {
       "type": "object",
       "properties": {
         "speed": {
@@ -300,6 +300,11 @@
         "collision",
         "keys"
       ]
+    },
+    "inputs": {
+        "type": "object",
+        "description": "Maps NCS input names to the values for each input.",
+        "additionalProperties": { "type": "number" }
     }
   },
   "required": [

@@ -90,7 +90,7 @@ class NCSServerProtocol(WebSocketServerProtocol):
         for index, message in enumerate(self.messages[1:]):
             path = sensors["arrays"][index]["path"]
             dataDescriptor = "%s[%d]" % (sensors["arrays"][index]["type"], len(message))
-            setNested(sensors["data"], path, dataDescriptor)
+            setNested(sensors, path, dataDescriptor)
 
         print sensors
 

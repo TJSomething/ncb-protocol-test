@@ -1,13 +1,32 @@
 {
   "version": "1.0",
   "arrays": [
-    "Uint8Array",
-    "Float32Array",
-    "Float32Array",
-    "Float32Array",
-    "Float32Array"
+    {
+        "path": "sensors.camera.image",
+        "type": "Uint8Array"
+    },
+    {
+        "path": "sensors.realCamera.image",
+        "type": "Uint8Array"
+    },
+    {
+        "path": "sensors.microphone.channels.0",
+        "type": "Float32Array"
+    },
+    {
+        "path": "sensors.microphone.channels.1",
+        "type": "Float32Array"
+    },
+    {
+        "path": "sensors.realMicrophone.channels.0",
+        "type": "Float32Array"
+    },
+    {
+        "path": "sensors.realMicrophone.channels.1",
+        "type": "Float32Array"
+    }
   ],
-  "data": {
+  "sensors": {
     "speed": 1.7,
     "angularVelocity": 1.3,
     "odometer": 6.2327614434364,
@@ -21,39 +40,21 @@
       }
     },
     "camera": {
-      "image": {
-        "placeholder": 0
-      },
+      "image": null,
       "width": 320,
       "height": 240
     },
     "realCamera": {
-      "image": {
-        "placeholder": 1
-      },
-      "width": 1920,
-      "height": 1080
+      "image": null,
+      "width": 160,
+      "height": 120
     },
     "microphone": {
-      "channels": [
-        {
-          "placeholder": 1
-        },
-        {
-          "placeholder": 2
-        }
-      ],
+      "channels": [ null, null ],
       "sampleRate": 44100
     },
     "realMicrophone": {
-      "channels": [
-        {
-          "placeholder": 3
-        },
-        {
-          "placeholder": 4
-        }
-      ],
+      "channels": [ null, null ],
       "sampleRate": 48000
     },
     "collision": {
@@ -69,5 +70,8 @@
       "W",
       "enter"
     ]
+  },
+  "inputs": {
+      "input1": -70.2
   }
 }
