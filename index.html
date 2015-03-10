@@ -4,6 +4,11 @@
 <title>WebSocket test</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"></script>
+<style>
+#data-structure {
+    font-size: 70%;
+}
+</style>
 </head>
 <body>
 Sensor data will be echoed in the console in the browser.
@@ -12,10 +17,15 @@ Sensor data will be echoed in the console in the browser.
 <button id="connect">Connect</button>
 </div>
 
+<div>Response:
+<div id="response"></div>
+</div>
+<div>Data being sent:
+<div id="data-structure"></div>
+</div>
+
 <div id="3d" style="display: none;"></div>
 <div id="2d"></div>
-Response:
-<div id="response"></div>
 <canvas id="videoImage" width="160" height="120"></canvas>
 <video autoplay id="monitor" width="160" height="120" style="display: none;"></div>
 <script>
@@ -237,6 +247,36 @@ function noStream(e) {
     console.log(msg);
 }
 
+// Show the data being sent
+function showSent() {
+    function renderObj(obj) {
+        var result;
+        
+        if (typeof obj === 'object' &&
+            obj !== null) {
+            result = document.createElement('ul');
+
+            Object.keys(obj).forEach(function (key) {
+                var item = document.createElement('li');
+                item.appendChild(document.createTextNode(key + ': '));
+                item.appendChild(renderObj(obj[key]));
+                result.appendChild(item);
+            });
+        } else {
+            result = document.createTextNode(obj);
+        }
+
+        return result;
+    }
+
+    var structParent = document.getElementById('data-structure');
+    if (structParent.children.length === 0) {
+        structParent.appendChild(renderObj(sensorData));
+    } else {
+        structParent.replaceChild(renderObj(sensorData), structParent.firstChild);
+    }
+}
+
 // Stats
 var stats = new Stats();
 stats.setMode(0);
@@ -254,6 +294,7 @@ function animate() {
         videoImageContext.drawImage( video, 0, 0, videoImage.width, videoImage.height );
     }
     send();
+    showSent();
     stats.end();
     requestAnimationFrame(animate);
 }
