@@ -45,7 +45,8 @@ import random
 subscribers = []
 def sendData():
     data = [random.random() for i in xrange(3)]
-    print "Sending data: %s" % data
+    if len(subscribers) > 0:
+        print "Sending data: %s" % data
     for sub in subscribers:
         sub.sendMessage(str(data))
 
