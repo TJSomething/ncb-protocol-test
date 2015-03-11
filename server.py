@@ -28,6 +28,7 @@ import sys
 
 from twisted.internet import reactor
 from twisted.internet import task
+from twisted.internet import tksupport
 from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.static import File
@@ -41,19 +42,97 @@ from autobahn.twisted.resource import WebSocketResource, \
 import json
 import hashlib
 import random
+from Tkinter import *
+from ttk import *
 
-subscribers = []
-def sendData():
-    data = [random.random() for i in xrange(3)]
-    if len(subscribers) > 0:
-        print "Sending data: %s" % data
-    for sub in subscribers:
-        sub.sendMessage(str(data))
+class FakeNCSFrame(Frame):
+    def createWidgets(self):
+        self.data_view = Listbox(self)
+        self.data_view.pack(fill=BOTH, expand=1)
+
+        self.output_sliders = []
+        for i in xrange(self.outputs):
+            s = Scale(self, from_=-100, to=100, orient=HORIZONTAL)
+            s.pack(fill=X)
+            self.output_sliders.append(s)
+
+        self.QUIT = Button(self)
+        self.QUIT["text"] = "QUIT"
+        self.QUIT["command"] = self.quit
+        self.QUIT.pack(side="bottom")
+
+    def updateView(self, data):
+        def addKey(key, value, depth=0):
+            indent = '  ' * depth
+            if type(value) == list:
+                self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                for index, item in enumerate(value):
+                    addKey(index, item, depth+1)
+            elif type(value) == dict:
+                self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                for index, item in value.iteritems():
+                    addKey(index, item, depth+1)
+            else:
+                self.data_view.insert('end', '%s%s: %s' % (indent, str(key), str(value)))
+
+        self.data_view.delete(0, END)
+        for k,v in data.iteritems():
+            addKey(k,v)
+
+    def quit(self):
+        self.master.destroy()
+        reactor.stop()
+
+    def __init__(self, master=None, outputs=0):
+        Frame.__init__(self, master)
+
+        self.outputs = outputs
+
+        self.pack()
+        self.createWidgets()
+
+
+class FakeNCS(object):
+    frequency = 100
+
+    def __init__(self, outputs):
+        self.root = Tk()
+        self.app = FakeNCSFrame(master=self.root, outputs=outputs)
+        self.app.pack(fill=BOTH, expand=YES)
+        self.root.protocol("WM_DELETE_WINDOW", self.app.quit)
+        tksupport.install(self.root)
+
+        self.subscribers = []
+        self.send_loop = task.LoopingCall(self.send)
+        self.send_loop.start(1.0/FakeNCS.frequency)
+
+    def receive(self, data):
+        self.app.updateView(data)
+
+    def send(self):
+        outputs = [s.get() for s in self.app.output_sliders]
+        for sub in self.subscribers:
+            sub(outputs)
+
+    def subscribe(self, callback):
+        self.subscribers.append(callback)
+
+    def unsubscribe(self, callback):
+        self.subscribers.remove(callback)
+
+instance = FakeNCS(3)
+def getNCS(id):
+    """This could make an object to interface with NCS, but we're
+    going to use something static for now."""
+    return instance
 
 class NCSServerProtocol(WebSocketServerProtocol):
     messages = []
     messagesLeft = None
     path = None
+
+    def sendReports(self, reports):
+        self.sendMessage(str(reports))
 
     def handleSensors(self, sensors):
         self.messages = [sensors]
@@ -93,11 +172,13 @@ class NCSServerProtocol(WebSocketServerProtocol):
             dataDescriptor = "%s[%d]" % (sensors["arrays"][index]["type"], len(message))
             setNested(sensors, path, dataDescriptor)
 
-        print sensors
+        self.ncs.receive(sensors)
+
 
     def onConnect(self, request):
         self.path = request.path
-        subscribers.append(self)
+        self.ncs = getNCS(0)
+        self.ncs.subscribe(self.sendReports)
 
     def onMessage(self, payload, isBinary):
         if not isBinary:
@@ -106,7 +187,7 @@ class NCSServerProtocol(WebSocketServerProtocol):
             self.handleData(payload)
 
     def onClose(self, wasClean, code, reason):
-        subscribers.remove(self)
+        self.ncs.unsubscribe(self.sendReports)
 
 if __name__ == '__main__':
 
@@ -136,8 +217,5 @@ if __name__ == '__main__':
     site.protocol = HTTPChannelHixie76Aware  # needed if Hixie76 is to be supported
     reactor.listenTCP(8080, site)
     print "Server running on localhost:8080..."
-
-    l = task.LoopingCall(sendData)
-    l.start(1.0)
 
     reactor.run()
