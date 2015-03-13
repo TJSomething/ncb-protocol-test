@@ -44,6 +44,7 @@ import hashlib
 import random
 from Tkinter import *
 from ttk import *
+from PIL import Image, ImageTk
 
 class FakeNCSFrame(Frame):
     def createWidgets(self):
@@ -68,6 +69,7 @@ class FakeNCSFrame(Frame):
         self.QUIT.pack(side="bottom", **padding)
 
     def updateView(self, data):
+        self.images = []
         def addKey(key, value, depth=0):
             indent = '  ' * depth
             if type(value) == list:
@@ -75,15 +77,23 @@ class FakeNCSFrame(Frame):
                 for index, item in enumerate(value):
                     addKey(index, item, depth+1)
             elif type(value) == dict:
-                self.data_view.insert('end', '%s%s:\n' % (indent, str(key)))
-                for index, item in value.iteritems():
-                    addKey(index, item, depth+1)
+                if "image" in value and "width" in value and "height" in value:
+                    image = Image.frombytes("RGBA",
+                        (value["width"], value["height"]), value["image"])
+                    self.images.append(ImageTk.PhotoImage(image))
+                    self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                    self.data_view.image_create('end', image=self.images[-1])
+                    self.data_view.insert('end', '\n')
+                else:
+                    self.data_view.insert('end', '%s%s:\n' % (indent, str(key)))
+                    for index, item in value.iteritems():
+                        addKey(index, item, depth+1)
             else:
                 self.data_view.insert('end', '%s%s: %s\n' % (indent, str(key), str(value)))
 
         old_top = self.data_view.yview()
         self.data_view.delete(1.0, END)
-        for k,v in data.iteritems():
+        for k,v in data["sensors"].iteritems():
             addKey(k,v)
         self.data_view.yview_moveto(old_top[0])
 
@@ -177,8 +187,9 @@ class NCSServerProtocol(WebSocketServerProtocol):
         # it.
         for index, message in enumerate(self.messages[1:]):
             path = sensors["arrays"][index]["path"]
-            dataDescriptor = "%s[%d]" % (sensors["arrays"][index]["type"], len(message))
-            setNested(sensors, path, dataDescriptor)
+            # Only set images, since that's all we've got decoders for
+            if sensors["arrays"][index]["type"] == "Uint8Array":
+                setNested(sensors, path, message)
 
         self.ncs.receive(sensors)
 
