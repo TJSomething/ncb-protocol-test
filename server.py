@@ -49,8 +49,14 @@ from PIL import Image, ImageTk
 class FakeNCSFrame(Frame):
     def createWidgets(self):
         padding = {"padx": 10, "pady": 10}
-        self.data_view = Text(self)
-        self.data_view.pack(side="top", fill=BOTH, expand=1, **padding)
+        self.data_frame = Frame(self, border=2, relief=SUNKEN)
+        self.scroll = Scrollbar(self.data_frame)
+        self.scroll.pack(side=RIGHT, fill=Y)
+        self.data_view = Text(self.data_frame, border=0, yscrollcommand=self.scroll.set)
+        self.data_view.config(state=DISABLED)
+        self.data_view.pack(side="top", fill=BOTH, expand=1)
+        self.scroll.config(command=self.data_view.yview)
+        self.data_frame.pack(fill=BOTH, expand=1, **padding)
 
         self.output_sliders = []
         self.output_values = []
@@ -92,10 +98,16 @@ class FakeNCSFrame(Frame):
                 self.data_view.insert('end', '%s%s: %s\n' % (indent, str(key), str(value)))
 
         old_top = self.data_view.yview()
+        self.data_view.config(state=NORMAL)
         self.data_view.delete(1.0, END)
         for k,v in data["sensors"].iteritems():
             addKey(k,v)
-        self.data_view.yview_moveto(old_top[0])
+        self.data_view.config(state=DISABLED)
+        new_top = self.data_view.yview()
+        # Find the ratio of the heights before and after redrawing and convert the old top
+        # into the new coordinate system
+        self.data_view.yview_moveto((new_top[1]-new_top[0])/(old_top[1]-old_top[0]) * old_top[0])
+
 
     def quit(self):
         self.master.destroy()
@@ -115,6 +127,7 @@ class FakeNCS(object):
 
     def __init__(self, outputs):
         self.root = Tk()
+        self.root.title("NCVB Server Demo")
         self.app = FakeNCSFrame(master=self.root, outputs=outputs)
         self.app.pack(fill=BOTH, expand=YES)
         self.root.protocol("WM_DELETE_WINDOW", self.app.quit)
