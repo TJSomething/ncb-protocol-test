@@ -47,37 +47,45 @@ from ttk import *
 
 class FakeNCSFrame(Frame):
     def createWidgets(self):
-        self.data_view = Listbox(self)
-        self.data_view.pack(fill=BOTH, expand=1)
+        padding = {"padx": 10, "pady": 10}
+        self.data_view = Text(self)
+        self.data_view.pack(side="top", fill=BOTH, expand=1, **padding)
 
         self.output_sliders = []
+        self.output_values = []
         for i in xrange(self.outputs):
-            s = Scale(self, from_=-100, to=100, orient=HORIZONTAL)
-            s.pack(fill=X)
+            v = DoubleVar()
+            self.output_values.append(v)
+            s_label = Label(self, textvariable=v)
+            s_label.pack(side="top")
+            s = Scale(self, from_=-100, to=100, orient=HORIZONTAL, variable=v)
+            s.pack(fill=X, side="top", **padding)
             self.output_sliders.append(s)
 
         self.QUIT = Button(self)
         self.QUIT["text"] = "QUIT"
         self.QUIT["command"] = self.quit
-        self.QUIT.pack(side="bottom")
+        self.QUIT.pack(side="bottom", **padding)
 
     def updateView(self, data):
         def addKey(key, value, depth=0):
             indent = '  ' * depth
             if type(value) == list:
-                self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                self.data_view.insert('end', '%s%s:\n' % (indent, str(key)))
                 for index, item in enumerate(value):
                     addKey(index, item, depth+1)
             elif type(value) == dict:
-                self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                self.data_view.insert('end', '%s%s:\n' % (indent, str(key)))
                 for index, item in value.iteritems():
                     addKey(index, item, depth+1)
             else:
-                self.data_view.insert('end', '%s%s: %s' % (indent, str(key), str(value)))
+                self.data_view.insert('end', '%s%s: %s\n' % (indent, str(key), str(value)))
 
-        self.data_view.delete(0, END)
+        old_top = self.data_view.yview()
+        self.data_view.delete(1.0, END)
         for k,v in data.iteritems():
             addKey(k,v)
+        self.data_view.yview_moveto(old_top[0])
 
     def quit(self):
         self.master.destroy()
@@ -110,7 +118,7 @@ class FakeNCS(object):
         self.app.updateView(data)
 
     def send(self):
-        outputs = [s.get() for s in self.app.output_sliders]
+        outputs = [s.get() for s in self.app.output_values]
         for sub in self.subscribers:
             sub(outputs)
 
