@@ -220,9 +220,8 @@ window.URL = window.URL || window.webkitURL;
 var video = document.getElementById('monitor');
 var videoImage = document.getElementById('videoImage');
 var videoImageContext = videoImage.getContext('2d');
-var videoData = videoImageContext.createImageData(videoImage.width, videoImage.height);
-buffers[1] = videoData.data.buffer;
 videoImageContext.fillStyle = '#000000';
+videoImageContext.globalAlpha = 1;
 videoImageContext.fillRect(0,0, videoImage.width, videoImage.height);
 navigator.getUserMedia({video: true}, gotStream, noStream);
 
@@ -291,8 +290,16 @@ function animate() {
     imageData.data.set(cameraData);
     ctx.putImageData(imageData, 0, 0);
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        videoImageContext.drawImage( video, 0, 0, videoImage.width, videoImage.height );
+        try {
+            videoImageContext.drawImage( video, 0, 0, videoImage.width, videoImage.height );
+        } catch (e) {
+            // Hack, because Firefox says it's ready before it is.
+            if (e.name !== 'NS_ERROR_NOT_AVAILABLE') {
+                throw e;
+            }
+        }
     }
+    buffers[1] = videoImageContext.getImageData(0, 0, videoImage.width, videoImage.height).data;
     send();
     showSent();
     stats.end();

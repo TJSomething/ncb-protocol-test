@@ -87,7 +87,7 @@ class FakeNCSFrame(Frame):
                     image = Image.frombytes("RGBA",
                         (value["width"], value["height"]), value["image"])
                     self.images.append(ImageTk.PhotoImage(image))
-                    self.data_view.insert('end', '%s%s:' % (indent, str(key)))
+                    self.data_view.insert('end', '%s%s:\n%s  ' % (indent, str(key), indent))
                     self.data_view.image_create('end', image=self.images[-1])
                     self.data_view.insert('end', '\n')
                 else:
