@@ -45,6 +45,7 @@ import random
 from Tkinter import *
 from ttk import *
 from PIL import Image, ImageTk
+import time
 
 class FakeNCSFrame(Frame):
     def createWidgets(self):
@@ -75,6 +76,12 @@ class FakeNCSFrame(Frame):
         self.QUIT.pack(side="bottom", **padding)
 
     def updateView(self, data):
+        # If we can expect that it will take too long render a frame,
+        # then skip frames
+        start = time.time()
+        if start - self.last_render < self.max_render_time:
+            return None
+
         self.images = []
         def addKey(key, value, depth=0):
             indent = '  ' * depth
@@ -100,13 +107,16 @@ class FakeNCSFrame(Frame):
         old_top = self.data_view.yview()
         self.data_view.config(state=NORMAL)
         self.data_view.delete(1.0, END)
-        for k,v in data["sensors"].iteritems():
+        for k,v in data.iteritems():
             addKey(k,v)
         self.data_view.config(state=DISABLED)
         new_top = self.data_view.yview()
         # Find the ratio of the heights before and after redrawing and convert the old top
         # into the new coordinate system
         self.data_view.yview_moveto((new_top[1]-new_top[0])/(old_top[1]-old_top[0]) * old_top[0])
+
+        if time.time() - start > self.max_render_time:
+            self.max_render_time = time.time() - start
 
 
     def quit(self):
@@ -117,6 +127,8 @@ class FakeNCSFrame(Frame):
         Frame.__init__(self, master)
 
         self.outputs = outputs
+        self.max_render_time = 0.0
+        self.last_render = 0.0
 
         self.pack()
         self.createWidgets()
@@ -167,7 +179,7 @@ class NCSServerProtocol(WebSocketServerProtocol):
 
     def handleSensors(self, sensors):
         self.messages = [sensors]
-        self.messagesLeft = len(self.messages[0]["arrays"])
+        self.messagesLeft = json.loads(sensors)["messages"]
 
     def handleData(self, data):
         self.messages.append(data)
@@ -178,34 +190,15 @@ class NCSServerProtocol(WebSocketServerProtocol):
             self.handleMessages()
 
     def handleMessages(self):
-        def setNested(l, path, value):
-            splitPath = path.split(".")
-            for key in splitPath[:-1]:
-                if isinstance(l, list):
-                    l = l[int(key)]
-                else:
-                    l = l[key]
-
-            if isinstance(l, list):
-                l[int(splitPath[-1])] = value
+        def deserializeArrays(obj):
+            if "index" in obj and "type" in obj:
+                return self.messages[obj["index"]+1]
             else:
-                l[splitPath[-1]] = value
-
-        sensors = self.messages[0]
-
-        # Typically, we'd want to put the binary into the sensors structure and
-        # then process that.
-        # But, since this is just an example, we're going to replace the locations
-        # where the data would go with a string describing the data and print
-        # it.
-        for index, message in enumerate(self.messages[1:]):
-            path = sensors["arrays"][index]["path"]
-            # Only set images, since that's all we've got decoders for
-            if sensors["arrays"][index]["type"] == "Uint8Array":
-                setNested(sensors, path, message)
+                return obj
+            
+        sensors = json.loads(self.messages[0], object_hook=deserializeArrays)["sensors"]
 
         self.ncs.receive(sensors)
-
 
     def onConnect(self, request):
         self.path = request.path
@@ -214,7 +207,7 @@ class NCSServerProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, isBinary):
         if not isBinary:
-            self.handleSensors(json.loads(payload))
+            self.handleSensors(payload)
         else:
             self.handleData(payload)
 

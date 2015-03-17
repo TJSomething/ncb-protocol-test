@@ -51,9 +51,10 @@ function startSending() {
 }
 
 function send() {
+    var buffers;
     if (socketsOpen === 1 &&
         ws.readyState === 1) {
-        ws.send(JSON.stringify(sensorData));
+        buffers = serializeSensorData(sensorData);
         buffers.forEach(function (buffer) {
             ws.send(buffer);
         });
@@ -66,34 +67,6 @@ document.getElementById('connect').addEventListener('click', function () {
 
 // An example of the sensor data
 var sensorData = {
-  "version": "1.0",
-  "arrays": [
-    {
-        "path": "sensors.camera.image",
-        "type": "Uint8Array"
-    },
-    {
-        "path": "sensors.realCamera.image",
-        "type": "Uint8Array"
-    },
-    {
-        "path": "sensors.microphone.channels.0",
-        "type": "Float32Array"
-    },
-    {
-        "path": "sensors.microphone.channels.1",
-        "type": "Float32Array"
-    },
-    {
-        "path": "sensors.realMicrophone.channels.0",
-        "type": "Float32Array"
-    },
-    {
-        "path": "sensors.realMicrophone.channels.1",
-        "type": "Float32Array"
-    }
-  ],
-  "sensors": {
     "speed": 1.7,
     "angularVelocity": 1.3,
     "odometer": 6.2327614434364,
@@ -136,11 +109,31 @@ var sensorData = {
       "A",
       "W"
     ]
-  },
-  "inputs": {
-      "input1": -70.2
-  }
 };
+
+function serializeSensorData(sensors) {
+    var buffers = []; 
+    buffers.unshift(JSON.stringify(sensors, function (k, v) {
+        if (k === 'keys') {
+            return Object.keys(v);
+        } else if (typeof v === 'object' &&
+                   v !== null && 
+                   v.buffer !== null &&
+                   v.buffer instanceof ArrayBuffer) {
+            buffers.push(v.buffer);
+            return {
+                index: buffers.length - 1,
+                type: v.constructor.name
+            };
+        } else {
+            return v;
+        }
+    }));
+    // Add the number of messages
+    buffers[0] = '{"messages":' + (buffers.length-1) + ',"sensors":' + buffers[0] + '}';
+    return buffers;
+}
+
 var buffers = new Array(6);
 var placeholderAudio = new Float32Array(48000/30);
 buffers[2] = placeholderAudio;
@@ -151,7 +144,7 @@ buffers[5] = placeholderAudio;
 var canvas = document.createElement('canvas'),
     ctx = canvas.getContext('2d'),
     imageData = ctx.createImageData(320, 240);
-buffers[0] = imageData.data.buffer;
+sensorData.camera.image = imageData.data;
 canvas.width = 320;
 canvas.height = 240;
 document.getElementById('2d').appendChild(canvas);
@@ -252,7 +245,9 @@ function showSent() {
         var result;
         
         if (typeof obj === 'object' &&
-            obj !== null) {
+            obj !== null &&
+            !(obj.buffer !== undefined &&
+              obj.buffer instanceof ArrayBuffer)) {
             result = document.createElement('ul');
 
             Object.keys(obj).forEach(function (key) {
@@ -299,9 +294,9 @@ function animate() {
             }
         }
     }
-    buffers[1] = videoImageContext.getImageData(0, 0, videoImage.width, videoImage.height).data;
+    sensorData.realCamera.image = videoImageContext.getImageData(0, 0, videoImage.width, videoImage.height).data;
     send();
-    showSent();
+    //showSent();
     stats.end();
     requestAnimationFrame(animate);
 }
@@ -309,9 +304,9 @@ animate();
 
 document.addEventListener('keydown', function (e) {
     if (e.keyCode === 87) {
-        sensorData.sensors.odometer += 1;
+        sensorData.odometer += 1;
     } else if (e.keyCode === 83) {
-        sensorData.sensors.odometer -= 1;
+        sensorData.odometer -= 1;
     }
 });
 

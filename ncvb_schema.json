@@ -2,6 +2,20 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "definitions": {
+      "buffer": {
+          "type": "object",
+          "description": "A placeholder for a binary message to follow."
+          "properties": {
+              "index": {
+                  "type": "integer",
+                  "minimum": 0
+              },
+              "type": {
+                  "type": "string"
+              }
+          },
+          "required": ["index", "type"]
+      },
       "audio": {
           "type": "object",
           "description": "Audio data",
@@ -9,9 +23,7 @@
               "channels": { 
                   "type": "array"
                   "minLength": 1,
-                  "items": {
-                      "type": "null"
-                  }
+                  "items": { "$ref": "#/definitions/buffer" }
               },
               "sampleRate": {
                   "type": "integer",
@@ -24,9 +36,7 @@
           "type": "object",
           "description": "Image data",
           "properties": {
-              "data": {
-                  "type": "null"
-              },
+              "data": { "$ref": "#/definitions/buffer" },
               "width": {
                   "type": "integer",
                   "minimum": 0
@@ -36,7 +46,7 @@
                   "minimum": 0
               }
           },
-          "required": [ "data", "width", "height" ]
+          "required": [ "image", "width", "height" ]
       }
   },
   "properties": {
