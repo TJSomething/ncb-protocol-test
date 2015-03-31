@@ -32,40 +32,21 @@ from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.static import File
 
-from autobahn.twisted.websocket import WebSocketServerFactory
+from autobahn.twisted.resource import HTTPChannelHixie76Aware
 
-from autobahn.twisted.resource import WebSocketResource, \
-    HTTPChannelHixie76Aware
-
-import json
 import hashlib
 import random
-import time
 
-from protocol import NCSServerProtocol
+from factory import SimulationFactory
 
 if __name__ == '__main__':
-
-    if len(sys.argv) > 1 and sys.argv[1] == 'debug':
-        log.startLogging(sys.stdout)
-        debug = True
-    else:
-        debug = False
-
-    factory = WebSocketServerFactory("ws://localhost:8080",
-                                     debug=debug,
-                                     debugCodePaths=debug)
-
-    factory.protocol = NCSServerProtocol
-    factory.setProtocolOptions(allowHixie76=True)  # needed if Hixie76 is to be supported
-
-    resource = WebSocketResource(factory)
 
     # we server static files under "/" ..
     root = File(".")
 
-    # and our WebSocket server under "/ws"
-    root.putChild("ws", resource)
+    # and our simulation launcher under "/simulations"
+    resource = SimulationFactory()
+    root.putChild("simulations", resource)
 
     # both under one Twisted Web Site
     site = Site(root)

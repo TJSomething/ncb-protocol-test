@@ -6,9 +6,14 @@ from twisted.internet import task
 
 class FakeNCS(object):
     frequency = 100
+    # This stores the original root window
+    master_root = None
 
     def __init__(self, outputs):
-        self.root = Tk()
+        if self.master_root is None:
+            self.root = FakeNCS.master_root = Tk()
+        else:
+            self.root = Toplevel(FakeNCS.master_root)
         self.root.title("NCVR Server Demo")
         self.app = FakeNCSFrame(master=self.root, outputs=outputs)
         self.app.pack(fill=BOTH, expand=YES)

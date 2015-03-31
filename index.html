@@ -13,7 +13,11 @@
 <body>
 Sensor data will be echoed in the console in the browser.
 <div>
-<label>WebSocket URL: <input id="ws-url" value="ws://localhost:8080/ws/0"></label>
+<label>Number of outputs: <input id="sim-params" value="3"></label>
+<button id="create-sim">Create Simulation</button>
+</div>
+<div>
+<label>WebSocket URL: <input id="ws-url"></label>
 <button id="connect">Connect</button>
 </div>
 
@@ -29,6 +33,20 @@ Sensor data will be echoed in the console in the browser.
 <canvas id="videoImage" width="160" height="120"></canvas>
 <video autoplay id="monitor" width="160" height="120" style="display: none;"></div>
 <script>
+document.getElementById('create-sim').addEventListener('click', function () {
+    var params = document.getElementById('sim-params').value;
+    var xhr = new XMLHttpRequest()
+    xhr.onload = function () {
+        document.getElementById('ws-url').value = this.responseText;
+    };
+    xhr.open("POST", "/simulations/", true);
+    xhr.setRequestHeader("Content-type", "text/plain");
+    xhr.setRequestHeader("Content-length", params.length);
+    xhr.setRequestHeader("Connection", "close");
+    xhr.send(params);
+
+});
+
 // Handle sockets
 var ws;
 var socketsOpen = 0;

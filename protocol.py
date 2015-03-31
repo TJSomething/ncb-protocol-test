@@ -1,13 +1,12 @@
 from autobahn.twisted.websocket import WebSocketServerProtocol
+from autobahn.websocket.http import HttpException
 from FakeNCS import FakeNCS
-
-instance = FakeNCS(3) 
-def getNCS(id):
-    """This could make an object to interface with NCS, but we're
-    going to use something static for now."""
-    return instance
+import json
 
 class NCSServerProtocol(WebSocketServerProtocol):
+    # A list of active "simulations"
+    instances = []
+
     messages = []
     messagesLeft = None
     path = None
@@ -39,8 +38,12 @@ class NCSServerProtocol(WebSocketServerProtocol):
         self.ncs.receive(sensors)
 
     def onConnect(self, request):
-        self.path = request.path
-        self.ncs = getNCS(0)
+        index = request.path.split("/")[-1]
+        try:
+            self.ncs = NCSServerProtocol.instances[int(index)]
+        except IndexError:
+            raise HttpException(404, "Simulation does not exist")
+
         self.ncs.subscribe(self.sendReports)
 
     def onMessage(self, payload, isBinary):
@@ -50,4 +53,5 @@ class NCSServerProtocol(WebSocketServerProtocol):
             self.handleData(payload)
 
     def onClose(self, wasClean, code, reason):
-        self.ncs.unsubscribe(self.sendReports)
+        if hasattr(self, "ncs"):
+            self.ncs.unsubscribe(self.sendReports)

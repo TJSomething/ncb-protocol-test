@@ -2,6 +2,7 @@ from Tkinter import *
 from ttk import *
 from PIL import Image, ImageTk
 from twisted.internet import reactor
+import time
 
 class FakeNCSFrame(Frame):
     def createWidgets(self):
