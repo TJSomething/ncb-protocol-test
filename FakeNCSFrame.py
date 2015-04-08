@@ -16,21 +16,36 @@ class FakeNCSFrame(Frame):
         self.scroll.config(command=self.data_view.yview)
         self.data_frame.pack(fill=BOTH, expand=1, **padding)
 
-        self.output_sliders = []
+        self.output_widgets = []
         self.output_values = []
-        for i in xrange(self.outputs):
+        for index, output_type in enumerate(self.outputs):
             v = DoubleVar()
             self.output_values.append(v)
-            s_label = Label(self, textvariable=v)
-            s_label.pack(side="top")
-            s = Scale(self, from_=-100, to=100, orient=HORIZONTAL, variable=v)
-            s.pack(fill=X, side="top", **padding)
-            self.output_sliders.append(s)
+            if output_type == "s":
+                s_label = Label(self, textvariable=v)
+                s_label.pack(side="top")
+                s = Scale(self, from_=-100, to=100, orient=HORIZONTAL, variable=v)
+                s.pack(fill=X, side="top", **padding)
+                self.output_widgets.append(s)
+            elif output_type == "b":
+                b = Button(self, text=str(index))
+                v.set(-70)
+                b.value = v
+                b.pack(fill=X, side="top", **padding)
+                b.bind("<ButtonPress-1>", self.onButtonDown)
+                b.bind("<ButtonRelease-1>", self.onButtonUp)
+                self.output_widgets.append(b)
 
         self.QUIT = Button(self)
         self.QUIT["text"] = "QUIT"
         self.QUIT["command"] = self.quit
         self.QUIT.pack(side="bottom", **padding)
+
+    def onButtonDown(self, event):
+        event.widget.value.set(30)
+
+    def onButtonUp(self, event):
+        event.widget.value.set(-70)
 
     def updateView(self, data):
         if not self.enabled:

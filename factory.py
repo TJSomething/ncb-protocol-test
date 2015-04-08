@@ -37,7 +37,7 @@ class SimulationFactory(resource.Resource):
     def render_POST(self, request):
         path = "/".join(request.prepath)
         raw_params = request.content.read()
-        index = self.create(json.loads(raw_params))
+        index = self.create(raw_params)
         host = request.requestHeaders.getRawHeaders("host")[0]
         request.setHeader('Access-Control-Allow-Origin', '*')
         return "ws://%s/%s%d" % (host, path, index)
