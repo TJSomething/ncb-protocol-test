@@ -10,7 +10,7 @@ class FakeNCS(object):
     master_root = None
 
     def __init__(self, outputs):
-        if self.master_root is None:
+        if FakeNCS.master_root is None:
             self.root = FakeNCS.master_root = Tk()
         else:
             self.root = Toplevel(FakeNCS.master_root)
@@ -25,16 +25,25 @@ class FakeNCS(object):
         self.send_loop.start(1.0/FakeNCS.frequency)
 
     def receive(self, data):
+        if not self.app.enabled:
+            return None
         self.app.updateView(data)
 
     def send(self):
+        if not self.app.enabled:
+            self.send_loop.stop()
+            return None
         outputs = [s.get() for s in self.app.output_values]
         for sub in self.subscribers:
             sub(outputs)
+
+    def isEnabled(self):
+        return self.app.enabled
 
     def subscribe(self, callback):
         self.subscribers.append(callback)
 
     def unsubscribe(self, callback):
-        self.subscribers.remove(callback)
+        if callback in self.subscribers:
+            self.subscribers.remove(callback)
 

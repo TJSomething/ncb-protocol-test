@@ -43,6 +43,8 @@ class NCSServerProtocol(WebSocketServerProtocol):
             self.ncs = NCSServerProtocol.instances[int(index)]
         except IndexError:
             raise HttpException(404, "Simulation does not exist")
+        if not self.ncs.isEnabled():
+            raise HttpException(404, "Simulation closed")
 
         self.ncs.subscribe(self.sendReports)
 

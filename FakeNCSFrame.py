@@ -33,6 +33,8 @@ class FakeNCSFrame(Frame):
         self.QUIT.pack(side="bottom", **padding)
 
     def updateView(self, data):
+        if not self.enabled:
+            return None
         # If we can expect that it will take too long render a frame,
         # then skip frames
         start = time.time()
@@ -77,8 +79,9 @@ class FakeNCSFrame(Frame):
 
 
     def quit(self):
-        self.master.destroy()
-        reactor.stop()
+        self.master.withdraw()
+        self.enabled = False
+        #reactor.stop()
 
     def __init__(self, master=None, outputs=0):
         Frame.__init__(self, master)
@@ -86,6 +89,7 @@ class FakeNCSFrame(Frame):
         self.outputs = outputs
         self.max_render_time = 0.0
         self.last_render = 0.0
+        self.enabled = True
 
         self.pack()
         self.createWidgets()
